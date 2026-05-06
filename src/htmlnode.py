@@ -13,18 +13,21 @@ class HTMLNode():
             return ""
         
         props_html = ""
-        for prop in self.props:
-            props_html += f' {prop.key}="{prop.value}"'
+        for key, val in self.props.items():
+            props_html += f' {key}="{val}"'
         
         return props_html
     
     def __eq__(self, other):
-        result = (
-            self.tag == other.tag and
-            self.value == other.value and
-            self.children == other.children and
-            self.props == other.props
-        )
+        if isinstance(other, str):
+            result = self.to_html() == other
+        else:
+            result = (
+                self.tag == other.tag and
+                self.value == other.value and
+                self.children == other.children and
+                self.props == other.props
+            )
         return result
 
     def __repr__(self):
