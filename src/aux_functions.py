@@ -106,3 +106,14 @@ def text_to_textnodes(text):
     nodes = split_nodes_link(nodes)
 
     return nodes
+
+def markdown_to_blocks(text):
+    blocks = text.split("\n\n")
+    sanitized_blocks = []
+
+    for block in blocks:
+        block = block.strip()
+        if len(block) > 0:
+            sanitized_blocks.append(block)
+    
+    return sanitized_blocks
