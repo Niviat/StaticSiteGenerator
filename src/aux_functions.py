@@ -1,4 +1,5 @@
 import re
+from enum import Enum
 
 from textnode import TextNode, TextType
 from leafnode import LeafNode
@@ -117,3 +118,43 @@ def markdown_to_blocks(text):
             sanitized_blocks.append(block)
     
     return sanitized_blocks
+
+class BlockType(Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    CODE = "code"
+    QUOTE = "quote"
+    ULIST = "unordered list"
+    OLIST = "ordered list"
+
+def block_to_block_type(md_block):
+    block_type = BlockType.PARAGRAPH
+
+    if re.match(r"#{1,6} ", md_block):
+        block_type = BlockType.HEADING
+    elif re.match(r"`{3}\n.*`{3}$", md_block, re.S):
+        block_type = BlockType.CODE
+    elif all(list(map(lambda x: True if x == "" or re.match(r"> ?", x) else False, md_block.split("\n")))):
+        block_type = BlockType.QUOTE
+    elif all(list(map(lambda x: True if x == "" or re.match(r"- ", x) else False, md_block.split("\n")))):
+        block_type = BlockType.ULIST
+    else:
+        lines = md_block.split("\n")
+        idx = 1
+        ordered = True
+
+        for line in lines:
+            match = re.match(r"[1-9]\d*\. ", line)
+            if match:
+                if int(match.group()[0:-2]) != idx:
+                    ordered = False
+                    break
+            elif line != "":
+                ordered = False
+                break
+            idx += 1
+        
+        if ordered:
+            block_type = BlockType.OLIST
+
+    return block_type
