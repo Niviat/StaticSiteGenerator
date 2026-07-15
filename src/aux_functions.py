@@ -1,4 +1,6 @@
 import re
+import os
+import shutil
 from enum import Enum
 
 from textnode import TextNode, TextType
@@ -220,3 +222,37 @@ def markdown_to_html_node(markdown):
         block_nodes.append(block_to_html_node(block_type, block))
     
     return ParentNode("div", block_nodes)
+
+def remove_dir_contents(directory = "public"):
+    if not directory.startswith("/") and not directory.startswith("."):
+        directory = "./" + directory
+
+    contents = os.listdir(directory)
+
+    for entry in contents:
+        if entry == ".gitignore":
+            continue
+        
+        path = directory + "/" + entry
+        if os.path.isfile(path):
+            os.remove(path)
+        else:
+            shutil.rmtree(path)
+
+def copy_dir_contents(source = "static", destination = "public"):
+    if not source.startswith("/") and not source.startswith("."):
+        source = "./" + source
+    
+    if not destination.startswith("/") and not destination.startswith("."):
+        destination = "./" + destination
+    
+    contents = os.listdir(source)
+
+    for entry in contents:
+        src_path = source + "/" + entry
+        if os.path.isfile(src_path):
+            shutil.copy(src_path, destination)
+        else:
+            dst_path = destination + "/" + entry
+            os.mkdir(dst_path)
+            copy_dir_contents(src_path, dst_path)
