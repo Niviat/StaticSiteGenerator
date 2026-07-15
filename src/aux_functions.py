@@ -3,6 +3,7 @@ from enum import Enum
 
 from textnode import TextNode, TextType
 from leafnode import LeafNode
+from parentnode import ParentNode
 
 def text_node_to_html_node(text_node):
     match text_node.text_type:
@@ -132,9 +133,9 @@ def block_to_block_type(md_block):
 
     if re.match(r"#{1,6} ", md_block):
         block_type = BlockType.HEADING
-    elif re.match(r"`{3}\n.*`{3}$", md_block, re.S):
+    elif re.match(r"`{3}\n.*\n`{3}$", md_block, re.S):
         block_type = BlockType.CODE
-    elif all(list(map(lambda x: True if x == "" or re.match(r"> ?", x) else False, md_block.split("\n")))):
+    elif all(list(map(lambda x: True if x == "" or re.match(r">", x) else False, md_block.split("\n")))):
         block_type = BlockType.QUOTE
     elif all(list(map(lambda x: True if x == "" or re.match(r"- ", x) else False, md_block.split("\n")))):
         block_type = BlockType.ULIST
@@ -158,3 +159,64 @@ def block_to_block_type(md_block):
             block_type = BlockType.OLIST
 
     return block_type
+
+def text_to_leaf_nodes(text):
+    text_nodes = text_to_textnodes(text)
+    leaf_nodes = []
+
+    for node in text_nodes:
+        leaf_nodes.append(text_node_to_html_node(node))
+    
+    return leaf_nodes
+
+def block_to_html_node(block_type, block):
+    block_lines = block.split("\n")
+    match block_type:
+        case BlockType.PARAGRAPH:
+            content = " ".join(list(map(lambda x: x.strip(), block_lines)))
+            leaf_nodes = text_to_leaf_nodes(content)
+            return ParentNode("p", leaf_nodes)
+        case BlockType.HEADING:
+            level = 0
+            while block_lines[0][level] == "#":
+                level += 1
+            block_lines[0] = block_lines[0][level:]
+            content = " ".join(list(map(lambda x: x.strip(), block_lines)))
+            leaf_nodes = text_to_leaf_nodes(content)
+            return ParentNode(f"h{level}", leaf_nodes)
+        case BlockType.CODE:
+            content = block[4:-3]
+            leaf_nodes = [text_node_to_html_node(TextNode(content, TextType.CODE))]
+            return ParentNode("pre", leaf_nodes)
+        case BlockType.QUOTE:
+            content = " ".join(list(map(lambda x: x[1:].strip(), block_lines)))
+            leaf_nodes = text_to_leaf_nodes(content)
+            return ParentNode("blockquote", leaf_nodes)
+        case BlockType.ULIST:
+            li_nodes = []
+            for line in block_lines:
+                content = line[1:].strip()
+                leaf_nodes = text_to_leaf_nodes(content)
+                li_nodes.append(ParentNode("li", leaf_nodes))
+            return ParentNode("ul", li_nodes)
+        case BlockType.OLIST:
+            li_nodes = []
+            for idx in range(len(block_lines)):
+                content = block_lines[idx][len(f"{idx}."):].strip()
+                leaf_nodes = text_to_leaf_nodes(content)
+                li_nodes.append(ParentNode("li", leaf_nodes))
+            return ParentNode("ol", li_nodes)
+        case _:
+            content = " ".join(block_lines.strip())
+            leaf_nodes = text_to_leaf_nodes(content)
+            return ParentNode("div", leaf_nodes)
+
+def markdown_to_html_node(markdown):
+    blocks = markdown_to_blocks(markdown)
+    block_nodes = []
+
+    for block in blocks:
+        block_type = block_to_block_type(block)
+        block_nodes.append(block_to_html_node(block_type, block))
+    
+    return ParentNode("div", block_nodes)
